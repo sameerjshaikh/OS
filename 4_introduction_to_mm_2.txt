@@ -1,3 +1,18 @@
+--->after studying the low-level, as well as 
+    high-level memory management mechanisms and 
+    policies, we must understand process 
+    memory management, in this context 
+
+--->in addition, we should be able to understand
+    the bigger pictures of physical memory management, 
+    virtual memory management, swaps-space 
+    management, and virtual memory 
+
+--->all the above topics are related 
+
+--->several hw mechanisms are involved 
+
+
 let us understand some of the low-level features
 of memory management, in the hw and OS
    -->hw /processor provides many low-level 
@@ -5,8 +20,9 @@ of memory management, in the hw and OS
       providing high-level mechanisms/services/
       policies  
 -->in this document, initially, we will study 
-   a hw memory model/mechanism, before 
-   understanding segment based and page based 
+   "a simple hw memory model/mechanism", before 
+   understanding "segment based model" and 
+   "page based model"
 - in this document, we will cover "segment-based
   memory management hw model", "page-based memory 
   management hw model", and "other hybrid models"
@@ -16,17 +32,18 @@ of memory management, in the hw and OS
 - eventually, we "consolidate the hw and OS sw 
   models"
 
-to understand some of the low-level features of 
-memory management of OS, we need to understand 
-some of the low-level features of hw memory 
-management models
+to understand some of the "low-level features of 
+memory management of OS", we need to understand 
+some of the "low-level features of hw memory 
+management models"
 
 - OS will "combine one or more hw memory management 
   models", "along with one or more sw memory 
   management models" to actually support 
   "process memory management"/"
   system memory management services"  
-
+--->process memory management is closer to 
+    application memory management 
 --->in our context, we will be keen to understand
     process memory management models, which 
     are applied to active applications
@@ -35,6 +52,9 @@ management models
     requirements - we are not keen on this 
     part  
 note: use  cat  /proc/cpuinfo
+--->/proc/cpuinfo is a special system interface
+     to access processor information, in the 
+     system 
 --->you need check the hw details of your hw/
     processor, using such commands  
       - based on this command, you can check the
@@ -43,6 +63,20 @@ note: use  cat  /proc/cpuinfo
         processor"- as discussed, OS uses 
         these addresses and provides 
         services
+--->we get the max. scope of physical addresses 
+--->we get the max. scope of virtual addresses
+
+--->let us assume, that our OS configuration/set-up 
+    is using the max. scopes of physical and 
+    virtual addresses
+--->physical address width is  36-bits
+--->virtual address width is   48-bits
+
+--->use the same interface/command to check the 
+    hw capabilities of your system ??
+ 
+
+ 
 --->refer to big-pictures of memory management ??
 --->it is conventional to use the term virtual 
     addresses, but in certain contexts, the 
@@ -74,22 +108,31 @@ note: use  cat  /proc/cpuinfo
                 support large virtual 
                 address-spaces - this will support 
                 large  virtual memory resources
+--->GPOS systems need to support applications 
+    larger, than total physical memory - this is 
+    a practical requirement 
 
--->in a 32-bit system(32-bit OS),max. support for 
+-->in a 32-bit hw system(32-bit OS),max. support for 
    virtual address width is 32-bits
--->in a 64-bit system(64-bit OS),max. support for 
+-->in a 64-bit hw system(64-bit OS),max. support for 
    virtual address width can be 48 or more, but 
-   less than 64-bits 
+   less than 64-bits - that is the hw set-up
+    --->hw pointer size is not 64-bits
+    --->sw pointer size can be 64-bits   
 
   
-           ---> add more examples to this list ??
-         - both hw memory resources and virtual 
-           address-spaces/virtual memory are
+           ---> add more examples to this list of 
+           virtual addresses and their uses   ??
+         - both hw memory/physical memory resources and 
+           virtual address-spaces/virtual memory are
            managed, with the help of OS memory 
            management techniques - finally, the 
            applications benefit ??
 -->we will understand these details, during 
    further discussions
+--->there are several core and non-core 
+    components of the OS, that support 
+    memory management 
          - following are dealing with process
            resource limits and mainly, dealing
            with memory resource limits - 
@@ -100,7 +143,9 @@ note: use  cat  /proc/cpuinfo
            processes 
          - refer to man 3 prlimit
          - refer to man 1 prlimit 
-            --->prlimit -p $BASHPID  
+            --->prlimit -p $BASHPID 
+--->many of these non-core components are 
+    needed, for process memory management  
 -->many of these system utilities and system 
    parameters will be used, in our practicals  
 - in the case of low-level features of hw, we 
@@ -111,11 +156,15 @@ note: use  cat  /proc/cpuinfo
      - virtual addresses of processor
 -->the processes/applications are assigned 
     logical/virtual addresses by OS/process
-    memory manager 
+    memory manager
+     - width/scope of logical/virtual 
+       addresses is based on the hw features
+ 
 -->these virtual addresses/logical addresses
    are translated to physical addresses, with 
    the help of OS and hw/processor/MMU set-up   
-     - MMU / memory management unit of processor 
+     - MMU / memory management unit is a 
+       hw feature of processor 
 
 
 
@@ -123,10 +172,13 @@ note: use  cat  /proc/cpuinfo
 
 
 
-     - in this "context of discussions", we will 
-       be "assuming MMU , based systems" - a typical 
-       GPOS uses hw /processor, with MMU support 
-     - "control registers and "translation tables" of 
+     - in these "context of discussions", we will 
+       be "assuming MMU , based systems" - "a typical 
+       GPOS uses hw /processor, with MMU support"
+--->certain specialized systems may have a different 
+    processor/hw set-up  
+     - "certain processor control registers" and 
+       "virtual address translation tables" of 
        processor", for memory management  
      - as part of the "translation tables", we will 
        come across "segment tables" and "page tables"-
@@ -134,10 +186,14 @@ note: use  cat  /proc/cpuinfo
          of each process - we will see the details  
      - we will study, about segment table entires 
        and page table entries
-        - where are the translation tables/segment tables
+--->all these translation tables are assigned/allocated
+    to processes, for their process management of 
+    address-spaces and physical memory
+        - where are the translation tables/
+          segment tables
           /page-tables stored, in the system, for 
           processes ???
-          -->these are managed as nested tables of
+          -->these are managed, as nested tables of
              pds, 
              in the system 
           -->these tables are managed, as part of 
@@ -162,6 +218,8 @@ note: use  cat  /proc/cpuinfo
        segments/pages are used -
        -->each process is assigned a virtual 
           address-space - a range of addresses
+         -->these addresses/ranges are managed, 
+            using nested objects, in the pd 
        -->each address-space will  be further 
           divided into virtual segments/pages, 
           as per the memory models 
@@ -171,7 +229,8 @@ note: use  cat  /proc/cpuinfo
      - as part of these processor/hw features, 
        there will be 
        support for, (segment/page) fault exceptions - 
-       these 
+       - these are low-level processor exceptions, 
+       supported by the processor/hw - these 
        are memory fault exceptions generated, 
        if our processes/active applications 
        attempt illegal memory operations  - 
@@ -180,13 +239,15 @@ note: use  cat  /proc/cpuinfo
        and scenarios are different - processor 
        supports these fault exceptions ?? 
 --->following 3 low-level mechanisms are 
-    provided by processor and used by OS :
+    provided by processors and used by OSs :
      -->hw interrupt events
      -->trap events/trap instructions
      -->fault exception events(we may mostly 
         come across memory faults/exceptions, 
         but a modern day processor supports
-        several other fault exceptions)   
+        several other fault exceptions)  
+--->we will see the actual details of memory 
+    fault exceptions below  
    note: refer to memory managment diagrams ??     
      - based on the above, we will come across the 
        following process memory management 
@@ -194,17 +255,18 @@ note: use  cat  /proc/cpuinfo
   
          - "process" address space 
              - "every process will be assigned its own 
-               logical or virtual address-space" - ?
---->this assigned and managed by process memory 
+               private logical or virtual address-space" - ?
+--->private here means, not shared 
+--->this is assigned and managed by process memory 
     manager of the system 
                 - how is this address-space of a 
                   process managed, by OS/process
-                  memory manager ??
+                  memory manager/pd ??
                   --->an address-space of a process
                       is managed, using descriptors/
                       objects and maintained, as 
-                      a list of nested objects, in each pd 
-                      of the process
+                      a "list of nested objects", 
+                      in each pd of the process
                  ---> for "every process", there is 
                       a pd, "in the system, hidden", 
                       but "takes care of most of 
@@ -214,7 +276,8 @@ note: use  cat  /proc/cpuinfo
                       showing how address-space of 
                      a process is managed, using 
                      descriptors, in a pd - refer to 
-                     14_mem_mg.pdf and its slides 
+                     "14_mem_mg.pdf(slide 21)" and 
+                     its slides 
                  --->every "virtual address-space of 
                      every process is managed", using 
                      "pd + nested objects/descriptors"
@@ -224,6 +287,9 @@ note: use  cat  /proc/cpuinfo
                        are part of the "OS memory 
                        management design and finally
                        serving the applications"
+--->there will be one nested object/descriptor 
+    describing each logical/virtual segment of 
+    a private process address-space 
          -->such a set-up of virtual address-space
             is repeated, for every process, in the 
             system  
@@ -232,13 +298,21 @@ note: use  cat  /proc/cpuinfo
            each "segment" is assigned a part of the 
            address-space 
            and managed ??
+--->any process address-space is divided into 
+    segements and managed, so techniques, like 
+    segment based memory management /page 
+    based memory management are used on top 
+    of these segments 
 -->this is one of the reasons, for segment-based 
    memory management 
          - based on the context,  "logical segments/ 
            or virtual segments" - ?
+--->in certain memory models, we will come across
+    logical pages/virtual pages 
          - based on the context, "logical pages /
            or virtual pages" - ?
-         - in the real-designs and processes/applications
+         - in the real-designs and 
+            processes/applications
            , "virtual segments" are used 
             
          - why segments ??
@@ -254,13 +328,24 @@ note: use  cat  /proc/cpuinfo
                 -->lib data segments
                 -->many more, as per applications
                    requirements
+--->why not maintain all the contents of an active 
+    application, in a single segment  ??
+-->why do we need multiple segments ??
+
+--->each segment needs to be managed differentlty, 
+    based on the contents of the segment 
+--->so, code segment is managed differently, from 
+    data segment, which is managed differently, from 
+    a stack segment and so on 
+
+
 --->in the next set of discussions, we will be 
     using tools to understand the actual segments, 
     in processes/active applications
    -->by separating contents and managing the 
       segments, as per contents' characteristics, 
       there will better memory management /
-      protection  
+      access permissions/protection  
               - "for each segment", there are different 
                 "characteristics", which need to 
                 be managed, at "OS level and hw level",
@@ -273,6 +358,10 @@ note: use  cat  /proc/cpuinfo
          - typically, "total physical memory is divided 
            into page-frames", 
            which are "smaller blocks of memory" ??
+--->physical memory management is based on the 
+    process memory managment techniques used, so 
+    physical memory management techniques may 
+    vary  
 --->hw memory management, in a modern day OS 
     is done, using smaller memory blocks, page-frames  
          - "demand paging" is a "sw mem.management 
@@ -293,6 +382,9 @@ note: use  cat  /proc/cpuinfo
    in detail  
          - "swap-space is a part of the disk-space", 
             which is used, by "VMM and VM" ??
+--->VMM stands, for virtual memory managment techniques 
+--->VM stands, for virtual memory resource
+--->VMM and VM are related  
              -->swap-space is an important resource
                 which is managed, as part of 
                 virtual memory /virtual memory 
@@ -301,13 +393,30 @@ note: use  cat  /proc/cpuinfo
 -->swap-space is typically part of the disk-space
    of the system - we will see more details - 
    swap-space does not store file systems/file 
-   contents, by stores process contents, as part 
+   contents, but stores process contents, as part 
    of virtual memory management  
 note: at the end of these discussions, we will have 
       a clear "understanding of memory managment", 
       "hw and OS perspective", 
       and "application perspective"   
+--->we need to refer to some more lecture diagrams
+      --->refer to all.pdf
+     --->slide 131 
+     --->on the left side, there is an application 
+         /program file/object file of the executable 
+         -->this object file will contain/use 
+            virtual /logical addresses 
+     -->when this program is loaded into the system, 
+        a process will be created and virtual address-space
+        /segments are set-up, based on the program file, 
+        as well as run-time requirements 
 
+     -->in addition, the actual contents of the segments are
+        loaded into physical memory blocks 
+
+    --->based on the above descriptions, visualize
+        left side diagram and right side diagram 
+  
 - let us "understand logical addresses/logical address 
   space / logical pages - at low-level" - if we 
   understand logical addresses well, virtual addresses
@@ -319,7 +428,9 @@ note: at the end of these discussions, we will have
 
 - how these "logical addresses/pages are mapped 
   and translated to physical addresses" - "there are
-  different hw translation techniques" ?? 
+  different hw translation techniques" ??
+--->above is a form of introduction, but the details 
+    follow  
 --->actual details start from here ??
 - a modern day processor supports "logical/ virtual 
   addresses" on "one side of the processor" and 
@@ -327,24 +438,33 @@ note: at the end of these discussions, we will have
   physical addresses" - for "instance, there are 
   several processor registers which will accept 
   virtual/logical addresses, from processes/programs"  
-  -->processor registers,like program counter/
+  -->many modern processors' registers,
+     like program counter/
      stack pointer and other such will take 
      virtual addresses only, not physical 
      addresses 
 - of course, there is a translation mechanism 
   supported, by the processor, with the 
-  help of MMU and OS - OS manages setting 
+  help of MMU and OS - OS manages setting up 
   tables, initialization of their entries an d
   also, updating control registers of processors 
+--->low-level memory management is also done, 
+    by OS 
 
 - let us see certain diagrams, which give us 
   visualization - refer to pdfs
+--->again refer to all.pdf 
+     --->slide 131
+     --->slide 134
+     --->slide 135
+--->connect all the details 
 
 - "logical addresses/logical address-space" and 
   "virtual addresses/virtual address-space" are the 
   same, from the processor perspective - this is 
   true, for processor only - see the next set of 
-  points 
+  points - from OS/application perspectives, 
+  virtual addresses/logical addresses are different  
 
 - however, they are managed differently , from the 
   "OS and application perspectives" - 
@@ -373,7 +493,11 @@ note: at the end of these discussions, we will have
   are "logical or virtual addresses", as per the 
   system and context - in our systems/context, 
   virtual addresses/logical are commonly known as 
-  pointers - in certain programming languages  
+  pointers - in certain programming languages 
+    -->in GPOS systems, we can safely use 
+       the term virtual addresses 
+    --->however, in specialized systems, 
+        terminology may differ 
 
 - actually, logical addresses or virtual addresses 
   are provided, by processor and OS, but used by 
@@ -483,8 +607,8 @@ note: based on the hw memory management, OS will
    memory management mechanisms 
 - let us start, with a "simple hw memory management 
   technique and process memory management"
-
-  - in this hw technique, "a single base and bound 
+   --->refer to all.pdf, slide 134  
+  - in this hw technique, "a single set of single base and bound/ 
     length registers" are used to translate 
     logical / virtual 
     addresses to physical addresses, in the processor
@@ -495,6 +619,14 @@ note: based on the hw memory management, OS will
              cc.txt - additional text  
   - there is only, one such register set, in the 
     processor
+--->refer to all.pdf, slide 135 -->connect the details
+--->refer to lecture diagram of processes/their
+    address-spaces
+--->based on the diagrams of process address-spaces 
+    and their physical memory blocks, how do we 
+    link process address-spaces to corresponding 
+    physical memory blocks 
+   
       -->as per this simple model, there is a 
          single logical/virtual address register, 
          for program counter - in reality, there can 
@@ -529,17 +661,40 @@ note: based on the hw memory management, OS will
      allocated to the process 
 -->connect all the details, that are presented 
    -->every process is assigned a logical/virtual 
-      address starting, from 0 (>0) - from the 
-      same range of logical/virtual  addresses
+      address starting, from 0 (practically, >0) - 
+      from the 
+      same scope/range of logical/virtual  addresses
+      --->what do we understand, from the same 
+          scope/range ??
+          --->hw and OS provide an identical range of 
+              addresses/address-space 
+              to all the processes 
+          --->every process can use its own 
+              private copy of address-space
+              , since it is virtual/logical
+          -->however, virtual addresses/segments 
+             of a specific process are mapped to 
+             different physical memory segments 
+             , in the physical memory/space
+          -->based on the above set-up, using 
+             virtual addresses/address-spaces/
+             segments are convenient and flexible, 
+             for OS and processes/active applications 
+  
    -->based on basei and lengthi assigned to the 
       processi, translations are done,by the 
-     processor - of course, 
+     processor - for each process, basei/lengthi 
+     are stored, in the respective pd -
+
+      of course, 
       the logical address register and base and 
-      bound/length registers are initialized 
-    -for each lai of a processi/Pi, 
-      pai = lai + basei  
+      bound/length registers are initialized,during 
+      process creation and stored, in pds
+ 
+    -for each lai/vai of a processi/Pi, 
+      pai = lai/vai + basei  
     - lengthi is just used to verify and restrict 
-      the lai to a limit --> lai < lengthi
+      the lai to a limit --> lai/vai < lengthi
     - such a "restriction is known as memory 
       protection" - this will prevent crossing 
       the physical segment of a process and 
@@ -547,7 +702,9 @@ note: based on the hw memory management, OS will
       of other processes   
     - if "lai >= lengthi", "what happens",if
       there is a violation of the protection 
-      rules  ?? 
+      rules  ?? this will lead to serious 
+      fault exceptions, at the processor level - 
+      see the descriptions below  
  -->as per these rules, if we cross the allowed
     logical/virtual addresses/address-space/range, 
     this leads to crossing physical segment limits
@@ -559,9 +716,18 @@ note: based on the hw memory management, OS will
          operations, in the applications' 
          code - or,in certain cases, there will 
          be bugs,in the operating system code- 
-         non-core or core components   
+         non-core or core components - eventually,   
          the corresponding process will be 
          "abnormally terminated", by the OS  ??
+       --->these exception handling routines/
+           handlers are part of core of the 
+           OS
+
+--->if you are using certain programming platforms, 
+    which take care of exceptions, at high-level, 
+    these exceptions/faults will never reach 
+    the processor/OS
+  
 --->what ever be the cause of such an illegal 
     memory access,the cocerned process/active 
     application will be forcibly/abnormally 
@@ -607,11 +773,18 @@ note: based on the hw memory management, OS will
       "hw context switch" ?? yes - as part of such 
       process hw context switches, other processor
       registers are also updated
+--->these basei/lengthi values/registers are 
+    part of the hw context of a process - 
+    these need to be changed/switched, as 
+    per the current process being scheduled/ 
+    dispatched 
 --->processi address-spacei/virtual addresses + 
-    process descriptori/basei,boundi ----> 
+    process descriptori/basei,boundi ----> + 
              processor / logical address reg, 
                          base register, length 
                          register
+
+                   translation 
                    ----------> physical addresses
                                of physical memory 
                                blocki allocated to 
@@ -628,14 +801,17 @@ note: based on the hw memory management, OS will
           loaded into the processor 
          - in addition, logical addresses of the process
            will be passed to logical address registers 
-           of the processor 
+           of the processor - this is also part of 
+           scheduling/dispatching - logical address
+           register(s) of the processor are 
+           loaded/initialized   
          - for each logical address, there will be a 
            translation
            like we mentioned before 
          - effectively, every process will be 
            assigned its 
-           own logical/virtual address space and 
-           a physical memory block, in the 
+           own private logical/virtual address space and 
+           one or more physical memory blocks, in the 
            physical memory 
 -->extend the understanding of a single process to 
    multiple processes/their address-spaces/physical 
@@ -653,27 +829,38 @@ note: based on the hw memory management, OS will
              is assigned
              a single, large contiguous physical memory 
              block 
+-->allocation of a specific physical memory block to 
+   a process is part of physical memory management 
+      --->different policies may be used 
+          -->first fit 
+          -->best fit 
+          -->other policies
 
-           - in this simple hw technique, every process 
+           - in this simple memory management, every process 
              is assigned
              a separate logical address-space, which is 
              independent of other processes 
             
-            - in this simple memory model, every process 
+            - in this simple memory model, 
+              every process 
               must be 
               assigned a single, 
               large/contiguous physicalmemory 
               block
-            - assigning a large/contiguous memory block 
-             is 
-             not always feasible, 
-             due to external fragmentation 
-             of free physical memory blocks - there will be 
-             several 
-             smaller, free memory blocks, which are non- 
-             contiguous/scattered, but cannot be used,
-             as the processes 
-             will be needing contiguous memory blocks ??
+--->this simple memory model, using simple hw 
+    memory management is inefficient 
+
+     - assigning a large/contiguous memory block 
+       is 
+       not always feasible, 
+       due to external fragmentation 
+       of free physical memory blocks - in the context 
+       of external fragmentation, there will be 
+       several 
+       smaller, free memory blocks, which are non- 
+       contiguous/scattered, but cannot be used,
+       as the processes 
+       will be needing contiguous memory blocks ??
 --->meaning, due to external fragmentation of 
     free memory blocks, there will be several 
     smaller free memory blocks, which are non-contig,
@@ -704,7 +891,7 @@ note: based on the hw memory management, OS will
 
             - however, text books may suggest 
               compaction or 
-              moving of the processes, in the physical 
+              migrating the processes, in the physical 
               memory space to 
               reduce fragmentation and collate all 
               free memory blocks to generate larger 
@@ -714,7 +901,11 @@ note: based on the hw memory management, OS will
               are "academic techniques, which may be 
               inefficient and time-consuming" ???
                -->typically, not implemented, in 
-                  GPOS systems 
+                  GPOS systems
+--->many of the mechanism described, in the text 
+    books are not practically implemented,due 
+    to practical constraints
+
 -->other hw memory models and sw memory models 
    are proposed and some of these are practically 
    implemented and deployed 
@@ -737,7 +928,8 @@ note: similar to scheduling, we will assume
         of 4GiB of address-space - 
         however, a process may not be assigned 4GiB, "
         but a sub-set of 4GiB, based 
-        on the "size of the process/active appliction"
+        on the "smaller sizes of the processes/
+        active applications"
         and other memory management design issues 
            - what is the practical effectiveness
              of this address-space scope, for 
@@ -763,20 +955,45 @@ note: similar to scheduling, we will assume
             4GiB of VAS or several Terabytes of 
             VAS 
          -->if we have 100 processes - 100* 4GiB 
-                                     - 100*(n* Terabytes) 
+                                     - 100*(n* Terabytes)
+--->let us understand the above mechanisms, using 
+    some demos.
+       --->these demos work differently on 
+           32-bit and 64-bit systems
+       -->lecture demos are , for 32-bit systems
+       --->we will be loading/launching several 
+           ./ex2 2000& instances, for creating 
+           processes, with large vsz - vsz is th e
+           process size/process address-space 
+           size 
+use ps and top to check vsz of processes and 
+total physical memory/usage and swap-space 
+--->ps -e -o pid,cmd,stat,vsz,rsz
+
+--->top
+
+  
+   
 -->in these contexts, if a process is provided 
    4GiB or few terabyes of address-space, it 
    is just a range of addresses/segments, not 
    physical memory - that is why it is virtual ???
--->if OS assigns, such address-spaces, what is 
+--->in addition,certain objects/descriptors are
+    used, along with pd to manage these 
+    objects/descriptors 
+-->if OS assigns, such large, virtual address-spaces, 
+   what is 
    the practical use  ?? follow the discussions ?? 
 
    note : most of the basics of "logical address-spaces 
-          and 
-          translations are applicable to 64-bit systems", 
-          as well - however, the "scope is much larger and
+          /virtual and 
+          translations are applicable to 
+          64-bit systems", 
+          as well - however, the "scope is 
+          much larger and
           hw implementation is more complex" - 
-          logical address to physical address translations 
+          logical address to physical 
+          address translations 
           are more complex - "in the case
           of 64-bit systems", the 
           "max. scope of logical / virtual address space"
@@ -794,15 +1011,22 @@ note : in real-world systems, "multiprocessor" and
         - the "first advantage of logical/virtual address 
           spaces" is , that "each process can be allocated 
           their own independent address-space" - each 
-          process sees "a large address-space / virtual
+          process/active application  sees 
+          "a large address-space / virtual
           memory" - this is the beginning of virtual 
           address-space/virtual memory management 
+        - process/active application is exposed to 
+          a convenient/contiguous virtual 
+          address-space 
         - in addition, the system/OS does not 
           expose physical address-space/physical 
           memory blocks/fragmentation  to 
-          applications, at the high-level 
+          active applications/processes, 
+          at the high-level 
 -->it is a very good from of abstraction of 
-   physical resources  
+   physical resources and exporting virtual 
+   resources - however, eventually, virtual 
+   resources are mapped to physical resources 
 
         - the "second advantage is logical / virtual 
           address-spaces/segments can be used 
@@ -822,7 +1046,8 @@ note : in real-world systems, "multiprocessor" and
     and OS /hw manage all the fragmentation problems 
     and background issues 
 
-        - applications and application developers need not 
+        - applications and application developers 
+          need not 
           understand and work, with physical memory / 
           memory blocks, just work, with a convenient 
           logical or virtual address-spaces of the 
@@ -861,7 +1086,8 @@ note : in real-world systems, "multiprocessor" and
 
         - in all these discussions, larger logical/virtual 
           address width can support larger applications, 
-          using virtual memory mangement technqiues 
+          using virtual memory management technqiues/
+          virtual memory resources 
 
         - in a typical process memory management, 
           logical or virtual address space is divided 
@@ -894,11 +1120,14 @@ note : in real-world systems, "multiprocessor" and
            logical or virtual address-space and segments 
            are managed 
 
-         - in addition, let us use "cat /proc/<pid>/maps", 
-           for 
-           listing the address-space/segments details of 
-           a process - let us create a few processes and 
-           extract their address-space details :
+      - in addition, let us use "cat /proc/<pid>/maps", 
+        for (special interface to access the virtual 
+         address-space of a process)
+        listing the address-space/segments details of 
+        a process - let us create a few processes and 
+        extract their address-space details :
+--->we will be using these details, in our practicals 
+    and assignments 
 -->let us use certain simple demos, for understanding 
    processes and process virtual address-spaces/segments/
    characteristics  
@@ -941,6 +1170,11 @@ note : in real-world systems, "multiprocessor" and
     let us use   #./ex2 1000&
       -->this will create a large process, with 
          ~1GiB of vsz  
+--->for a large process, with larger address-space, 
+    let us use   #./ex2 2000&
+      -->this will create a large process, with 
+         ~2GiB of vsz  
+
 -->many of the following details are based on 
    virtual memory management - we will understand
    the details, after studying virtual memory 
@@ -968,6 +1202,10 @@ note : in real-world systems, "multiprocessor" and
          --->based on the above, what is the meaning
              of overcommitting of virtual memory 
              resources to processes, in the system ??
+--->there are other system utilities, like 
+    prlimit, for managing virtual address-spaces/
+    physical memory resources of processes 
+--->used , for practicals and assignments 
     - along with the above settings, let us assume, 
       that "prlimit, for the relevant processes
       is set to unlimited" or appropriate 
@@ -1142,7 +1380,9 @@ note :   in all these models,using logical address-spaces,
          initial understanding, we will use VMM, 
          in the context of GPOS
 
-
+--->following discussions will be on other hw memory 
+    management techniques and how these are used, by 
+    sw memory management models 
 note : in these initial "sw models", "logical addresses" and 
        "logical address-spaces will be used - initially, 
        "let us avoid virtual memory /virtual 
@@ -1154,20 +1394,33 @@ note : in these initial "sw models", "logical addresses" and
        - in the above discussions, we had discussed
          an inefficient hw model, but the following 
          discussions will use efficient hw models, 
-         like segment-based and page-based mem.mgmt 
+         like segment-based and page-based mem.mgmt
+--->typically, in a GPOS, every process address-space
+    is divided into segments and managed, by process
+    memory manager of OS - this is a sw mechanism, 
+    not hw mechanism  
+--->in addition, hw may support segment based 
+    memory management, which can be used, 
+    with sw segments of process address-space
+--->refer to all.pdf, slide, 137  
+--->refer to chapter11 slides of another reference
+--->also, refer to lecture diagrams 
+----->connect the details 
 -->let us understand hw segment based memory management, 
    before understanding page-based, as most of the 
    basic  principles are from hw segment based
    memory model  
       - as per earlier discussions, OS will assign an 
          address-space
-         to each process and divide it into logical segments 
+         to each process and divide it into logical/
+         virtual  segments 
          and manage - 
-         this division is more, for the contents 
-         and their characteristics - in addition, 
-         using hw models
-         , these segments are further mapped to 
-         several physical 
+         this division into segments is more, 
+         for the contents 
+         and their characteristics done, by 
+         OS  - in addition, 
+         using hw models, these segments are 
+         further mapped to several physical 
          memory segments, accordingly ???   
 
        - every process(Pi) address-space(VASi)
@@ -1180,59 +1433,77 @@ note : in these initial "sw models", "logical addresses" and
          - in the case of segment based, these 
          logical segments will be mapped, using physical 
          segements - 
+
+--->we can ignore page-based memory management, as
+    of now - see the page-based memory management 
+    discussions below  
 ///in the page-based model, these
-         "logical segments" will be further "divided into 
-         logical pages" and "managed/mapped to 
-         physical pages/page-frames"  
+//         "logical segments" will be further "divided into 
+//         logical pages" and "managed/mapped to 
+//         physical pages/page-frames"  
 
  
-       - for an efficient management of these segments and 
+       - for an efficient management of these sw segments 
+         and 
          their 
          mappings/translations, 
          MMU of the processor will use 
          "segment tables", 
          as per the underlying 
          hw model/implementation - each process is 
-         assigned its own segment table, which will 
+         assigned/allocated its own segment table, 
+         which will 
          contain mapping of virtual segments to 
-         physical segments   
+         physical segments,using segment table 
+         entries    
+--->in the simple hw memory management model, 
+    for each process, there is a single set of 
+    base/limit settings
+--->in the case of hw segment based memory model, 
+    for each process, there will be segment table 
+    allocated by OS and there will be several 
+    base/limit sets,meaning several entries
+--->each entry/base/limit set can be used to 
+    map a virtual segment of a process address-space
+    to a physical segment 
+--->the above can be done , for several segments 
+    of a process , so there are several entries    
+    - let us understand a hw model, that supports 
+      segment based memory management - in this context, 
+      we will be understanding a "standard segment based 
+      hw model" - in the "real systems, there are 
+      modified 
+     forms of this standard hw segment model" 
 
-       - let us understand a hw model, that supports 
-         segment based memory management - in this context, 
-         we will be understanding a "standard segment based 
-         hw model" - in the "real systems, there are 
-         modified 
-         forms of this standard hw segment model" 
+    - to start with, let us understand segment 
+      based memory 
+      management hw memory management technique/model,
+      along with process memory management  
 
-       - to start with, let us understand segment 
-         based memory 
-         management hw memory management technique/model,
-         along with process memory management  
-
-       - in this model, every process is managed 
-         using "logical"
-         or "virtual" address-space and in addition, 
-         they are
-         divided into "logical segments", 
-         as before - these logical segments can 
+    - in this model, every process is managed 
+      using "logical"
+      or "virtual" address-space and in addition, 
+     they are
+     divided into "logical segments", 
+     as before - these logical segments can 
          be of variable size - in addition, these 
          logical/virtual segments will be 
          mapped to corresponding 
          "physical segments", 
-         using "processor/MMU" and "segment table/entries"
+    using "processor/MMU" and "segment table/entries"
 --->refer to lecture diagrams/all.pdf 
 --->also, refer to diagrams, in chapter 11 of another
     reference by Charles Crowley - certain parts of 
     memory management are good, in this reference   
 
-       - for the above mappings, "every process" will be 
-         "allocated 
-         its own segment table", with 
-         "appropriate segment table entries" - 
-         each logical segment of the process will be 
-         mapped to corresponding "physical segment of 
-         the process",
-         using "a segment table entry" 
+    - for the above mappings, "every process" will be 
+      "allocated 
+     its own segment table", with 
+      "appropriate segment table entries" - 
+     each logical segment of the process will be 
+     mapped to corresponding "physical segment of 
+     the process",
+     using "a segment table entry" 
  -->in the context of segment based memory management 
     and segment table/entries, each entry contains 
     a basei/limiti, for each logical/virtual segment- 
@@ -1246,13 +1517,16 @@ note : in these initial "sw models", "logical addresses" and
     management follow the discussions - segment 
     based memory management is more efficient   
 
-       - each "segment table entry contains a base address, 
-         length"
+       - each "segment table entry contains 
+         a base address, 
+         length of the sw segment"
          of the virtual segment/physical segment 
-         , and "other attributes" - 
+         , and "other attributes/characteristics" - 
          base address will be 
          used to map the allocated physical segment 
-
+--->we will see more of these memory attributes/
+    characteristics, during page-based memory 
+    management  
        - unlike the simple hw memory management model. 
          there will be "several base/limit entries"
          managed, in "several segment table entries" 
@@ -1269,6 +1543,7 @@ note : in these initial "sw models", "logical addresses" and
                table is per process and base address of 
                table is maintained, 
                in the pd of the respective process - 
+               (nested)
                every process is assigned its own 
                segment table - in addition, 
                the base address of the  
@@ -1285,11 +1560,19 @@ note : in these initial "sw models", "logical addresses" and
                physical segments - this is efficient 
                usage of fragmented, non-contiguous 
                physical segments
-               due to external fragmentation 
+               due to external fragmentation
+--->fragmented, non-contiguous physical segments 
+    are used efficiently  
              -->compare this hw memory model, with 
                 the simple hw memory model ??
                 -->what are the benefits ??? 
-
+           -->as mentioned above, physical memory 
+              segments/resources are used efficiently 
+           -->with the help of hw segments/
+              mem. management, we can effectively 
+              manage each segment, as per its 
+              characteristics 
+                   
        - for each process, there is a separate segment table, 
          which is maintained, as part of the pd - meaning, 
          base address of the segment-table is maintained, 
@@ -1322,118 +1605,143 @@ note : in these initial "sw models", "logical addresses" and
             several blocks of phy. memory, not a single large
             memory block  
 -->there are still some disadvantages, as well 
-          - still, there will be several virtual/logical 
-            segments, whose 
-            "size will not match, with free physical segments", 
-            and 
-            there will be wastage , due to external fragmentation
-            --->efficiency is improved, but not 100% 
+     - still, there will be several virtual/logical 
+       segments, whose 
+       "size will not match, with free physical segments", 
+       and 
+       there will be wastage , due to external fragmentation
+       --->efficiency is improved, but not 100% 
 
-          - due to such wastage, phy mem. blocks will be used 
-            inefficiently ??? there will be some amount of 
-            inefficiency
+      - due to such wastage, phy mem. blocks will be used 
+        inefficiently ??? there will be some amount of 
+        inefficiency
 
-          - due to logical address-space and segment based hw 
-            memory model, phy. mem blocks are efficiently used 
-            and application/process uses logical address-space 
-            and benefits of segment based hw model 
+      - due to logical address-space and 
+        segment based hw 
+        memory model, phy. mem blocks are 
+        efficiently used 
+        and application/process uses logical address-space 
+        and benefits of segment based hw model 
 
-          - in addition, "in a typical GPOS system", 
-            "it is difficult to efficiently divide the 
-             virtual/logical address-space into 
-            virtual/logical segments", 
-            which can be efficiently mapped to 
-            physical segments, 
-            as there are other processes/applications, 
-            with different requirements
+       - in addition, "in a typical GPOS system", 
+         "it is difficult to efficiently divide the 
+         virtual/logical address-space into 
+         virtual/logical segments", 
+         which can be efficiently mapped to 
+         physical segments, 
+         as there are other processes/applications, 
+         with different requirements
        -->this is a major drawback of segment based 
-          memory management
+          memory management, in GPOS systems
        -->however, hw segment based management may be 
           used, in specialized computing systems  
 
-          - there are still problems, in the hw model, 
-            but sw model of process memory management 
-            is good enough - so, there is a need for 
-            a hw page-based memory management, which is 
-            an improvised form of hw segment-based memory 
-            management and still, maintaining some of 
-            the hw segment model, in sw memory management  
+      - there are still problems, in this hw model, 
+        but sw model of process memory management 
+        is good enough - so, there is a need for 
+        "a hw page-based memory management model", 
+        which is 
+        "an improvised form of hw segment-based memory 
+        management model" and still, maintaining 
+        some of 
+        the hw segment model, in sw memory management 
+--->before we jump to hw page-based model, let 
+    us understand memory faults, in segment 
+    based memory management 
+ 
 -->based on the above hw model, if a process attempts to 
-   cross segment, processor/hw will generate a 
-   segmentation fault exception - in most cases, 
+   cross a segment, processor/hw will generate a 
+   segmentation fault exception - if we are crossing 
+   the limit of a segment of a process/active 
+   application, a memory fault is generated, by 
+   the processor - in most cases, 
    it will be treated, as an illegal memory access
    and the process will be forcibly/abnormally 
-   terminated - this is not a desirable, normal 
-   termination of a process  
-          - based on the above problems, "an improvised form of 
-            hw model", known "as page-based memory management" is 
-            used, in "GPOS systems", 
-            which "is an improvisation of segment-based memory 
-            management" - "most basic principles of segment-based 
-            memory management still hold true", for "page-based 
-            memory managment"
+   terminated - actually, this memory fault will 
+   be handled, by OS core - this is not a desirable, 
+   normal 
+   termination of a process
+--->the above memory protection of segments of a 
+    process is a form of memory protections supported, 
+    in hw and OS    
+   - based on the above problems, "an improvised form of 
+     hw model", known "as page-based memory management" is 
+     used, in "GPOS systems", 
+     which "is an improvisation of segment-based memory 
+     management" - "most basic principles of segment-based 
+     memory management still hold true", for "page-based 
+     memory managment"
 -->page-based is an evolution of segment-based 
-          - the "hw model is supported", by "processor/MMU"
-            and according 
-            to "the hw model", "OS and its components are 
-            designed and implemented" - modified design 
-            and implementation is done       
-          - following a good summary of page-based memory 
-            management model, based on hw and sw techniques :
+    - the "hw model is supported", by "processor/MMU"
+      and according 
+      to "the hw model", "OS and its components are 
+      designed and implemented" - modified design 
+      and implementation is done       
+   - following a good summary of page-based memory 
+     management model, based on hw and sw techniques :
 
-            - in this model, "virtual/logical address-space 
-              of the process 
-              is divided into logical pages" - "still, there are
-              logical segments managed, by OS"
-    -->first, a virtual address-space of a process is divided
-       into logical segments, based on the contents of the 
-       application, like code/data/heap/stack/lib/others 
-    -->in addition, each virtual segment is not mapped to 
-       physical segments - instead, these virtual segments 
-       are further divided into virtual pages, which are
-       smaller,fixed-size units 
-                -->in the first step, the "logical address-space"
-                   of the "process is created and managed by 
-                   OS", using "processor address-space"
-                -->in addition, this address-space is divided
-                   into segments, for practical reasons
-                   -->each segment/contents will have their 
-                      own characteristics and require 
-                      different memory management  
-                   -->for instance, code segment may 
-                      be shared, with other processes 
-                   -->code segment may not allow 
-                      write operations 
-                   -->data segment may need read/write 
-                      operations
-                   -->heap segment(s) may need dynamic 
-                      expansions 
-                   --->similarly, stack memory region 
-                       needs to be extended during 
-                       run-time 
-                   -->some data segments may be read-only 
-                   --->meaning, different segments are
-                   managed, as per the characteristics 
-                   of their contents  
-          --> in addition, each segment is divided into
-              virtual/logical pages and managed - every 
-              page is of equal size and fixed-size
-              -->for our current requirements, it will 
-                 be 4KiB - however, may change, as per
-                 hw /OS platforms  
-              --> each logical page is further translated 
-                 /mapped to a physical memory block/
-                 page-frame -a page-frame is a memory 
-                 block of a single virtual page size - 
+  -->first, a virtual address-space of a process is divided
+     into virtual segments, based on the contents of the 
+     application, like code/data/heap/stack/lib/others 
+  --->this division is done, by OS, not hw 
+  -->in addition, each virtual segment is not mapped to 
+     physical segments - instead, each virtual segment 
+     is further divided into virtual pages, which are
+     smaller,fixed-size units 
+      -->in the first step, the "virtual address-space"
+         of the "process is created and managed by 
+         OS", using "processor address-space"
+      -->in addition, this address-space is divided
+         into sw segments, for practical reasons
+     -->each segment/contents will have their 
+        own characteristics and require 
+        different memory management  
+        -->for instance, code segment may 
+           be shared, with other processes 
+        -->code segment may not allow 
+           write operations 
+       -->data segment may need read/write 
+          operations
+       -->heap segment(s) may need dynamic 
+          expansions 
+      --->similarly, stack memory region 
+          needs to be extended during 
+          run-time 
+      -->some data segments may be read-only 
+    --->meaning, different segments are
+        managed, as per the characteristics 
+        of their contents  
+    --> in addition, each segment is divided into
+        virtual/logical pages and managed - every 
+        page is of equal size and fixed-size
+         -->for our current requirements, it will 
+            be 4KiB - however, may change, as per
+            hw /OS platforms  
+          --> each logical page is further translated 
+              /mapped to a physical memory block/
+                 page-frame -a page-frame is a physical 
+                 memory block of a single page size - 
                  in this context, "hw/MMU/processor"
                  enable page-based memory management - see
                 the discussions below ?? OS /process 
                 memory manager/physical memory managers 
-                manage the page-based memory management  
-
-            - when a process is created and its addresss-space
-              and segments are set-up, the segments are of 
-              variable size, due to practical reasons ??
+                manage the page-based memory management, 
+                with the help of hw/processor   
+--->each process is assigned a page-table, which contains
+    page-table entries 
+--->a page-table entry of a page-table translates 
+    virtual addresses of a virtual page to physical 
+    addresses of a page-frame/
+    physical memory block 
+--->in the case of segment based, each segment table 
+    entry was used to translate virtual addresses of 
+    a segment to  physical addresses of a physical 
+    segment
+--->ptes have a different set of fields, compared 
+    to segment table entries   
+      - when a process is created and its addresss-space
+        and segments are set-up, the segments are of 
+        variable size, due to practical reasons ??
                  - can you give one reason why segments 
                    are of variable size ?? depends on 
                     the applications' requirements - 
@@ -1446,18 +1754,18 @@ note : in these initial "sw models", "logical addresses" and
                     for 
                     an active programs/applications
 
-             -->Pi-->ASi-->logical segmenti->contains several
-                     |                        logical 
+             -->Pi-->VASi-->virtual segmenti->contains several
+                     |                        virtual 
                      |                        pages 
                      |                           |
-                     |                           ----->mapped to
+                     |                       (ptes)---->mapped to
                      |                                 page-frames
                      |
-                     ----->logical segmenti+1---->logical pages
+                     ----->virtual segmenti+1---->virtual pages
                      |                             |
-                     |                             --->page frames
+                     |                     (ptes) --->page frames
                      |              ....
-                     |---->logical segmenti+n---->logical pages  
+                     |---->virtual segmenti+n---->virtual pages  
                                                   ...........
             hint:  cat  /proc/<pid>/maps 
                    pmap   <pid>
@@ -1468,12 +1776,12 @@ note : in these initial "sw models", "logical addresses" and
                   managed - see the discussion below :
 
             hint: is the address-space divided into 
-                  logical segments ?? answer is YES - are 
+                  virtual segments ?? answer is YES - are 
                   these segments directly mapped to 
                   physical segments - answer is NO
-           hint : are these logical segments divided
-                  into logical pages ?? YES 
-           hints: are these logical pages mapped to 
+           hint : are these virtual segments divided
+                  into virtual pages ?? YES 
+           hints: are these virtual pages mapped to 
                   physical pages/page-frames ??- YES
                    ----> let us understand how the
                           page based memory management works   
@@ -1495,23 +1803,26 @@ note : in these initial "sw models", "logical addresses" and
               requirements 
 
             - however, in the case of "page-based memory managment", 
-              "size of a logical page is fixed", so a 
-               logical address-space
-		      of a process is divided into logical segments and 
-		      these logical segments are divided into 
-              "equal size logical-pages" 
+              "size of a virtual page is fixed", so a 
+               virtual address-space
+               of a process is divided into virtual segments(variable) 
+              and 
+	      these virtual segments are divided into 
+              "equal size virtual-pages" 
      -->in many text books, the terms segmentation and 
         paging are used - it is better to use the terminology
-        provided, in this document, since hw models and 
+        provided, in this document, since details of hw models and 
 
         OS/sw models are taken care of       
             - are we using hw segment model or hw page model, 
               in context ?? hw page-model - we will be 
-              mapping logical pages, which are of equal size - 
+              mapping virtual pages, which are of equal size - 
               already, division of segments is easier and 
               in addition, mapping will become easier
-
-            - since the division of logical segments is of 
+------->since we are not directly mapping segments to 
+        physical segments, we are not affected, by the 
+        size of the segments 
+            - since the division of virtual segments is of 
               equal size pages, 
               it is "seamlessly done", \
               by the process memory manager, 
@@ -1523,7 +1834,18 @@ note : in these initial "sw models", "logical addresses" and
               pages is seamless - further, mapping 
               these pages to page-frames is seamless 
          -->any page of a any segment may be mapped 
-            to any page-frame/physical memory block  
+            to any page-frame/physical memory block 
+--->since the virtual page size and physical memory block/
+    page-frame size are identical, any virtual page can 
+    be mapped to any physical page/page-frame - seamless
+--->based on the above :
+     --->dividing an address-space of a process 
+         into sw segments is seamless
+     -->further dividing each sw segment into 
+        virtual pages is seamless
+    -->once divided into virtual pages, mapping 
+       these to page-frames is seamless
+ 
 
             - the "total physical memory" of the system is divided into 
               "fixed size memory blocks", known as "page-frames" - 
@@ -1539,6 +1861,8 @@ note : in these initial "sw models", "logical addresses" and
                               -->any memory request 
                                  has to go through 
                                  physical memory manager
+--->in this hw model/sw model, fixed size memory management 
+    is typically used 
        -->in our case, process memory manager will 
           request physical memory managers, for 
           physical memory blocks/page-frames
@@ -1546,7 +1870,8 @@ note : in these initial "sw models", "logical addresses" and
       -->a processi/active applicationi 
               --->process memory manager 
                     --->physical memory manager  
-             
+   --->refer to big-pictures of memory management, for 
+       layered set-up/archictecture          
             - in this context as well, there will be "external 
               fragmentation of physical memory blocks", in 
               the physical memory 
@@ -1560,15 +1885,18 @@ note : in these initial "sw models", "logical addresses" and
                          fragmentation  
 
             - what is the "efficiency", in mapping 
-              logical pages to 
+              virtual pages to 
               page-frames of the physical memory  ???
+               -->once divided into virtual pages, mapping 
+                  these to page-frames is seamless
 
                - "assuming all the above points are true", 
                  can we say 
                  that "we can map any virtual/logical 
                  page of any process 
                  to any "free page-frame" of the physical memory 
-                 of the system" ??? for this memory model, 
+                 of the system" ??? for this process memory 
+                 management model, 
                  the answer is 
                  YES - this is more efficient than segment 
                  based memory management
@@ -1577,7 +1905,10 @@ note : in these initial "sw models", "logical addresses" and
                       of any process can be mapped to 
                       any (fragmented or not)page-frame- 
                       this provides 100% efficiency of 
-                      allocation and mapping    
+                      allocation and mapping   
+----->however, this memory management does not apply 
+      to system memory management used, by other services
+      of OS  
 -->as of now, we have understood the hw page-based memory 
    model and how it is used manage process memory address-spaces
    and mappings 
@@ -1668,7 +1999,8 @@ note : in these initial "sw models", "logical addresses" and
               "logical addresses of logical pages to 
                physical addressses of page-frames"
                     -->refer to the diagrams 
-
+--->after a summary, we will be seeing more details of 
+    ptes 
              - in a modern day GPOS system, following is the 
                set-up, for process memory management :
 
@@ -1704,7 +2036,11 @@ note : in these initial "sw models", "logical addresses" and
                  address-descriptor", 
                  "there will be a set of  page-table entries", for 
                  mapping the corresponding virtual/logical 
-                 pages to page-frames 
+                 pages to page-frames
+      --->as per the set-up, since virtual segments are 
+          divided into virtual pages and mapped, system 
+          allocates and initializes ptes, for each 
+          segment/its pages  
                       -->for every logical /virtual segment, there
                          will be several logical/virtual pages 
                       -->for each logical/virtual page, 
@@ -1725,7 +2061,8 @@ note : in these initial "sw models", "logical addresses" and
                  page table entries/ptes"
                  -->if there is a virtual segment and it 
                     has a set of attributes, as per the 
-                    contents of the segment, the same 
+                    contents/characteristics of the segment, 
+                    the same set of 
                     attributes are programmed into 
                     ptes of the corresponding pages of
                     the segment - the attributes stored, 
@@ -1755,9 +2092,13 @@ note : in these initial "sw models", "logical addresses" and
                   - in addition, it also maintains certain 
                   "attributes of the logical page/contents"??
                   - as per the attributes, certain restrictions
-                    may apply ?? these are low-level attributes
-                   and restrictions ??  
-                    -->for instance, if there a logical 
+                    may apply to the access of the virtual page/
+                    its page-frame ?? these are low-level attributes
+                   and restrictions ?? 
+------->these low-level mechanisms/restrictions/protections 
+        are effective, at the high-level/application/
+        high-level sw platform  
+                    -->for instance, if there a virtual  
                        page of code segment, it will be 
                        having certain attributes, like 
                        read only and executable, but 
@@ -1798,18 +2139,37 @@ note : in these initial "sw models", "logical addresses" and
                  to the "respective physical addresses" of
                  "pageframei" 
                        ---> refer to the diagrams and
-                            see the discussions below   
-
+                            see the discussions below  
+      --->refer to discussions below, for a detailed 
+          description of pte/fields/attributes and their 
+          working
+      --->the pte /attributes are described, after the 
+          following discussions
+   --->along with the discussions, let us use while1.c
+       and certain faulty memory accesses, for 
+       demonstrations
+    --->some of these demos/scenaris  are part of 
+        assignment 2     
+    -->in addition, due to GPOS set-up, virtual address-space 
+       allocated to a process is divided into 2 parts/spaces-
+       one is the user-space part and the other is system-space
+       part 
+          --->user-space /application-space
+          -->kernel-space/system-space 
+      --->in addition, these spaces/segments/pages/page-tables/
+          ptes are managed differently - read further
+      --->refer to lecture big pictures 
                - for "each logical address-space of a process", 
                  there "is a division into two parts" - 
                  meaning, 
                  "one major part of this address-space is 
-                 dedicated to user-space" and "another major 
+                 dedicated to user-space/application" 
+                 and "another major 
                  part is dedicated to system-space" - 
                  this division 
                  and managment is done, by OS, with the help 
                  of "hw model and sw techniques" ??/ 
-                      ---> a basic understanding of 
+                      ---> this is a basic understanding of 
                            user-space and system-space 
                - this is true, for every process, in the system -
                  effectively, "every process will have an unique
@@ -1818,6 +2178,9 @@ note : in these initial "sw models", "logical addresses" and
                  - meaning, "system-space part of every process 
                  is mapped to the same set of page-frames", which 
                  is "effectively, a single system-space"
+       -->if we access system space of any process, they 
+          mapped to the same set of page-frames, meaning all
+          system spaces map to a common set of page frames 
                      -->you are expected to understand the 
                         design and visualize user-space 
                         address-spaces of processes and
@@ -1838,7 +2201,8 @@ note : in these initial "sw models", "logical addresses" and
 
                - the other part of the address-space is 
                  dedicated to systems-space of the OS -
-                 in this system-space, core components 
+                 in this system-space, code and data of 
+                 core components 
                  of the OS are resident and mapped 
 
                - logical pages of system-space is mapped to 
@@ -1853,6 +2217,11 @@ note : in these initial "sw models", "logical addresses" and
                - which means, every process has its own 
                  user-space, but effectively, a common 
                  system-space
+         --->for user-space/system-space division/protection, 
+             ptes are set-up, using another attribute, u/s
+             bit - 'u' stands, for user-space attribute 
+             and 's' stands, for supervisor-space attribute- 
+             supervisor space is also known as system-space
 
             note: let us resume our discussions on 
                   ptes 
@@ -1868,7 +2237,8 @@ note : in these initial "sw models", "logical addresses" and
                    be used to map the logical addresses to 
                    physical addresses, in the page-frame 
 
-                 - there is a "present bit" - this bit 
+                 - there is a "present bit", in the ptes - 
+                   this bit 
                    is "typically set to 1", "if the 
                    corresponding logical page/virtualpage" 
                    is a 
@@ -1877,7 +2247,8 @@ note : in these initial "sw models", "logical addresses" and
                    page is , in use" - "the application
                    is using the logical page" 
                      -->this logical page is part of the
-                        application and used 
+                        application and used - it will 
+                        be part of a valid segment
                      --> it will contain a mapping 
                          /allocation of a page-frame, 
                          where the logical page is 
@@ -1885,13 +2256,15 @@ note : in these initial "sw models", "logical addresses" and
                      --> refer to user-space diagrams
                          ,"for valid segments/valid pages"
                          and "invalid segments/invalid 
-                         pages" 
+                         pages"
+---->what is a valid segment, in a process address-space??
+---->what is a invalid segment, in a process address-space ?? 
 --->if there is a valid segment/used segment, 
-    it will have a valid 
-    page and it will be mapped - when it is mapped, 
+    it will have  valid 
+    pages and it will be mapped - when it is mapped, 
     the P bit, in the pte is set to 1 
 -->if there is an invalid segment/unused segment, 
-   it will have an invalid page and it will not be
+   it will have  invalid pages and it will not be
    mapped - when it is unmapped, the P bit, in the 
    pte is set to 0 
                  - the present bit is set to 0, if the 
@@ -1909,12 +2282,17 @@ note : in these initial "sw models", "logical addresses" and
                    virtual 
                    address-space" is provided to "each process"
                    and "as per the actual usage of the active 
-                   application", "several logical pages/
-                   of segments 
+                   application", "several logical segments/
+                   pages 
                    of the address-space are used",but "several 
-                   logical pages/ segments" are unused, 
+                   logical segments/pages " are unused, 
                    as well  
-
+     --->if the process size is smaller, it will not 
+         occupy the entire process address-space scope, 
+         but a sub-set will be used - so, there will 
+         be used virtual segments - there will be 
+         unused virtual segments 
+        
                  - effectively, if P bit is set to 1, 
                    corresponding "logical page" is "used" 
                    and "valid" and has mapping - 
@@ -1928,7 +2306,8 @@ note : in these initial "sw models", "logical addresses" and
                       - for every process, there are several 
                    logical pages allocated, as per the 
                    requirements of the associated active 
-                   application - these logical pages 
+                   application/segments - these valid 
+                   logical pages 
                    belong to valid code, data, or 
                    other segments 
                    of the process/application  
@@ -1992,10 +2371,12 @@ note : in these initial "sw models", "logical addresses" and
                     - NULL pointer/address related exceptions
                       are part of illegal logical/virtual address
                       access
-                       -->refer to while11.c  
+                       -->refer to while1.c and related 
+                          demos. 
                -next discussion will cover possible 
-                "access permission bits of the pte", for
-                "accessing a logical page" and "its page-frame"
+                "protection bits/
+                 access permission bits of the pte", for
+                "accessing a virtual page" and "its page-frame"
 --->refer to the pte diagram and attributes, to understand
     the following discussion :
                     - next, let us understand protection bits, 
@@ -2063,19 +2444,29 @@ note : in these initial "sw models", "logical addresses" and
                           permissions are programmed
                           into the ptes 
 
-
+  --->based on the above discussions, protection bits/
+      access permission bits of a pte must be programmed, 
+      as per the characteristics of the segment of the 
+      virtual page - like code/data/heap/stack/RO data    
                     - based on the above requirements, protection
                       bits of ptes of the page-tables of 
                       logical segments/pages of processes will 
-                      be initialized, accordingly 
---->what happens, of code of a process or OS code attempts
+                      be initialized, accordingly
+  --->assuming, that for a process, as per the segments 
+      and their virtual pages, ptes of page-tables are 
+      programmed, what happens, if the restrictions 
+      are violated - meaning, what happens, if there are
+      illegal operations on virtual pages ??? 
+--->what happens, if code of a process or OS code attempts
     to access a read only page/pte/page-frame, for a 
     write access ??? a page-fault exception/memory fault 
-                     exception is generated 
---->what happens, of code of a process or OS code attempts
+                     exception is generated, at the 
+                     processor level, low-level 
+--->what happens, if code of a process or OS code attempts
     to access a read/execute only page/pte/page-frame, for a 
     write access ??? a page-fault exception /memory 
-                     fault exception is generated 
+                     fault exception is generated,at the
+                     processor level/low-level 
 
 -->before we understand the following discussion, we 
    need to understand another sw memory management model 
@@ -2092,13 +2483,15 @@ note : in these initial "sw models", "logical addresses" and
       is a single kernel-space, in the system  
   -->in the following discussion, let us understand, how the 
      ptes of user-space are assigned a specific memory management
-     attribute and the ptes of system-space are assigned a 
-     specific memory management attribute - this attribute 
-     is known as access privilege attribute - based on this 
-     attribute certain restrictions are assigned to system-space
-     pages/physical memory blocks - this access privilege 
-     attribute is not same as access permissions/protection 
-     attributes     
+     attribute(u/s bit) and the ptes of system-space are 
+     assigned a 
+     specific memory management attribute(u/s bit) - 
+     this attribute 
+     is known as "access privilege attribute" - based on this 
+     attribute, certain restrictions are assigned to system-space
+     pages/physical memory blocks - this "access privilege 
+     attribute" is not same as "access permissions/protection 
+     attributes"     
 
                     - as per modern processors/MMU/page-tables/
                       ptes, following attribute bit is present 
@@ -2108,8 +2501,10 @@ note : in these initial "sw models", "logical addresses" and
                         this bit, certain pages/page-frames can 
                         be accessed, in user-mode or system-mode,
                         accordingly  -
-                        can be accessed, by less-privileged 
-                        and privileged components of the system
+                        can be accessed, by less-privileged mode/
+                        components 
+                        and privileged mode/components 
+                        of the system
                         - however, certain pages/page-frames 
                         can be accessed only , by privileged 
                         components of the system, not less-
@@ -2145,46 +2540,66 @@ note : in these initial "sw models", "logical addresses" and
                         supervisor/system-space
 
                       - if the u/s bit is set to 1, we say, that 
-                        this page is assigned to user-space and 
+                        this page is assigned to user-space access
+                        privilege and 
                         can be accessed, by user-space components/
                         code and system-space components/code - if
                         set to 0, it is a supervisor page/system 
-                        space  
+                        space access privilege  
                         
                       - based on the above attribute, u/s bit 
-                        of ptes of logical pages of user-space
+                        of ptes of virtual/logical pages of 
+                        user-space
                         are set to 1 - this bit will be set for 
                         pages belonging to user-space applications 
-                        and non-core components    
+                        and non-core components - all these segments/
+                        pages/page-frames belong to user-space 
+                        memory region  
+            --->these pages can be access by user-space 
+                    
+                components and core components, both    
                      
                       - based on the above attribute, u/s bit 
-                        of ptes of logical pages of system-space
+                        of ptes of virtual/logical pages of 
+                        system-space
                         are set to 0 - this bit is set to 0, for 
                         system-space pages/components of core of 
-                        the OS 
-                       
+                        the OS - all these segments/pages/page-frames
+                        belong to system-space memory region  
+            --->based on the above pte settings, only system-space 
+                components/core components can access 
+                these system-space pages, not user-space components/
+                applications/non-core components         
+----->refer to 1_Unix_......txt, we had discussed about 
+      processor modes of execution, in a typical GPOS  
+----->following descriptions are based on the same  
                       - let us understand processor modes - 
                         in a typical modern day processor, 
                         there are privileged and less privileged 
                         modes - OS will force the processor 
                         to execute, in less privileged mode, for 
-                        executing user-space components/processes
+                        executing user-space components/processes/
+                        non-core components
                         - OS will force the processor to 
                         execute, in privileged mode, for 
                         executing system-space components / 
                         core of the OS 
 
-                      - based on the above low-level privilege, 
+                      - based on the above low-level privilege/
+                        mode of the processor, 
                         what is effect on the application/process, 
                         in the user-space ??
 
-                      - what is the effect of the above set-up 
+                      - what is the effect of the above low-level
+                        privileged mode of the processor set-up, 
                         on non-core components and applications ??
 
-        - as per the rules of hw and sw, if an user-space
+S 
+        - as per the rules of hw and OS sw, if an user-space
           component/utility/application attempts to 
           access logical/virtual addresses, in user-space, 
-          it will be allowed, by the processor - 
+          it will be allowed, by the processor/low-level 
+          privilege  - 
           however, if an user-space
           component/utility/application attempts to 
           access logical/virtual addresses, in system-space,
@@ -2192,7 +2607,12 @@ note : in these initial "sw models", "logical addresses" and
           the process/component will be forcibly/abnormally
           terminated - the low-level privilege does not 
           allow the access ??? non-core components/
-          applications execute, with lesser privileges??       
+          applications execute, with lesser privileges??    
+    --->the above memory fault is not same,as illegal 
+        /unused addresses/access permission problems, but 
+        due to access privilege problems 
+    --->this is a form of memory protection, for system-space
+        components/kernel    
 
           -similarly, if a system-space component /core
            of the OS attempts to access addresses, in 
@@ -2228,7 +2648,7 @@ note : in these initial "sw models", "logical addresses" and
                    can access and use its own address-space 
                    and mappings/memory blocks, but not other 
                    address-spaces and mappings/memory blocks 
-                   --> it is a form of protection 
+                   --> it is another form of memory protection 
                       - the above set-up is a form of memory 
                         protection ?? Yes 
                             
@@ -2241,12 +2661,27 @@ note : in these initial "sw models", "logical addresses" and
                         controlled and limited access is allowed, 
                         using system utilities/
                         system call APIS, as per the rules 
-                        of OS 
+                        of OS
+----->this is part of restricted execution environment provided
+      to applications/processes, in the user-space 
+----->can you name another such mechanism/policy, that is part 
+      of restricted execution environment ??? 
                - demos - let us use a simple program 
                          to demonstrate a few invalid 
                          and illegal addresses and 
                          related faults,due to access ??
-                
+  --->if we are using a GPOS system, with page-based 
+      memory mode, for process memory management, 
+      will this memory management model suffer from 
+      external fragmentation of free physical memory 
+      blocks/page-frames ??? NO 
+        --->all the virtual pages are of fixed size,page-size 
+        --->all the free page-frames/physical memory 
+            blocks are of fixed-size, page-size 
+        --->which means, any virtual page can be loaded/
+            mapped into any free page-frame, in the 
+            fragmented free memory blocks  
+              
    - internal fragmentation is present, in 
         the case of page-based memory management 
               - there will be a few used pages/
@@ -2262,7 +2697,13 @@ note : in these initial "sw models", "logical addresses" and
     one or more pages/page-frames - in this context, if 
     there is internal fragmentation, max. possible is 
     ~2k per segment - so, 5 * 2k is the total wastage 
-    ,due to internal fragmentation         
+    ,due to internal fragmentation  
+        --->the above means, that every segment can 
+            have a partially used/unused last page/
+            page-frame - this is the worst case scenario ??
+        --->based on the above, the internal fragmentation 
+            can be defined, as wastage due to unused 
+            parts of last page of segments        
 
 
                - it also depends on how many processes ??
@@ -2271,7 +2712,7 @@ note : in these initial "sw models", "logical addresses" and
                        - in most cases, internal fragmentation
                          due to pages/page-based memory 
                          management is negligible - it can be 
-                         ignored  
+                         ignored,in GPOS systems/applications   
                    note: one of the advantages of MMU/MPU/segment 
                          based memory management/page-based 
                          memory management hw techniques, 
@@ -2280,7 +2721,9 @@ note : in these initial "sw models", "logical addresses" and
    segment based, in a process - each segment of a 
    process are assigned their own access permissions/
    attributes - for code, read/execute, for data, read
-   /write or read-only and so on                    
+   /write or read-only and so on   
+     --->this is another form of protection, in hw page-based
+         memory model, along with sw segment based model                  
       - intra-process protections, using 
                            different access permissions, for 
                            different segments of the process 
@@ -2318,7 +2761,7 @@ note : in these initial "sw models", "logical addresses" and
                    and applications 
 -->there are memory overheads/expenses and run-time
    /cpu overheads/expenses, in a complex system, like 
-   GPOS 
+   GPOS,due to hw models and sw models  
                  - there are certain overheads, due to 
                    a complex hw/sw memory model, like 
                    page-based memory management, for 
@@ -2330,7 +2773,11 @@ note : in these initial "sw models", "logical addresses" and
                             process/pd - this overhead cannot 
                             be avoided - so, there will be some 
                             memory overhead/expense 
-                           -->few KiBs are lost   
+                           -->few KiBs are lost
+                              -->worst case, for larger applications, 
+                                 few MiBs are lost/wasted  
+      --->OS overhead, for maintaining active applications/small, 
+          as well as large applications   
 
                           - during run-time of this memory-model 
                             implementation,there are run-time 
@@ -2354,6 +2801,8 @@ note : in these initial "sw models", "logical addresses" and
                        -->there is a TLB cache technology 
                           which increases the performance of 
                           page-tables/ptes/translations
+                  --->TLB cache set-up will reduce the run-time
+                      overheads of page-table/ptes 
 
                   - apart from the above low-level performance
                     enhancement techniques, there are other 
@@ -2384,20 +2833,24 @@ note : in these initial "sw models", "logical addresses" and
                             into the processor, by the scheduler's 
                             dispatching part 
 
+      
+    --->in the following summary, we will assume, that GPOS 
+        systems are using logical address-spaces/logical 
+        addresses, for process memory managment   
+
           - let us consolidate page-based memory 
             management model used, for processes, 
             in modern OSs :
 
             - whenever a process is created, it is 
               allocated an independent logical address-
-              space/virtual address-space
-              , based on the address-space scope 
+              space, based on the address-space scope 
               provided, by hw and OS 
               --->all these features start, from 
                   the program/executable object file
-                  and continue into the process 
-                  and run-time of the process 
-           - in addition, a given address-space of 
+                  and continue into the process creation 
+                  and run-time management of the process 
+           - in addition, a given logical address-space of 
              a process is divided into logical segments 
              and managed, based on the characteristics 
              and attributes of the segments - these segments
@@ -2405,26 +2858,30 @@ note : in these initial "sw models", "logical addresses" and
                        
            - since it is a page-based hw model, these
              sw segments are further divided and managed , 
-             based on the attributes of the segments 
+             based on the attributes of the segments/contents 
          
-          - in addition, page-tables/ptes are allocated
-            for the process to map logical pages of the 
+          - in addition, page-tables/ptes/page-frames are allocated
+            initialized, for the process to map 
+            logical pages of the 
             segments of the process "to non-contiguous 
             page-frames allocated, from physical memory 
-            manager/allocator" 
+            manager/allocator" - most of these activities
+            are completed, during process creation 
+
 -->the physical memory managers have efficient policies
    and allocate physical memory blocks/page-frames, 
    as per these policies, but hidden from the 
-   processes 
+   processes - we will see a few policies, in the next 
+   document, for virtual memory management  
 --->during virtual memory management discussions, we will
     come across few such policies, in the context of 
     physical memory blocks/page-frames
 
  
-         - in the basic page-based model, we assume, 
+         - in the above basic page-based model, we assume, 
            that logical addresses/logical pages/logical 
-           address-space is used(sw model-1) - sw memory 
-           model-1 of the OS  
+           address-space is used(sw model-1) - "sw memory 
+           model-1" of the OS  
 
          - in this model, every valid logical page is 
            allocated a page-frame and mapped, when 
@@ -2432,7 +2889,7 @@ note : in these initial "sw models", "logical addresses" and
 
          - in this model, every invalid logical page 
            is unmapped and there is no page-frame 
-           allocated-invalid ptes  
+           allocated for invalid pages/segments , -invalid ptes  
                   
          - if a logical address of a valid logical 
            page is accessed, as per the atttibutes 
@@ -2452,17 +2909,21 @@ note : in these initial "sw models", "logical addresses" and
    insufficient access privileges  
 
 
-      -->sw model-1 is not popularly used, in 
-         GPOS, but in specialized OS platforms 
+      -->however,the above "sw model-1" is not 
+         popularly used, in  GPOS, but in specialized OS platforms 
          -->in sw model-1, pages of a process 
            address-space are known as logical 
            pages and the address-space is known 
-           as logical address-space 
+           as logical address-space - so, the addresses
+           are known as logical addresses  
                          
          - however, typically, user-space components/ 
            processes of GPOS use a different model, 
            page-based,virtual memory management model
-          - sw memory management model-2 of OS 
+          - sw memory management model-2 of OS
+   -->still, many of the basic mechanisms of model-1 
+      are still followed, in model-2
+   -->policies are different  
 
           --->follow the next memory management document, 
               for sw model-2
@@ -2470,7 +2931,8 @@ note : in these initial "sw models", "logical addresses" and
          -->in sw model-2, pages of a process 
            address-space are known as virtual 
            pages and the address-space is known 
-           as virtual address-space 
+           as virtual address-space - so, the 
+           addresses are known as virtual addresses  
 
   
 
